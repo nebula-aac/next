@@ -1,4 +1,5 @@
 import { ApolloServer } from "@apollo/server";
+import { ApolloServerErrorCode } from "@apollo/server/errors";
 import { startServerAndCreateNextHandler } from "@as-integrations/next";
 import { Neo4jGraphQL } from "@neo4j/graphql";
 import gql from "graphql-tag";
@@ -42,7 +43,18 @@ const neoSchema = new Neo4jGraphQL({typeDefs, driver});
 
 const server = new ApolloServer({
     schema: await neoSchema.getSchema(),
-    introspection: true,
+    formatError: (formattedError, error) => {
+        if (
+            formattedError.extensions?.code ===
+            ApolloServerErrorCode.GRAPHQL_VALIDATION_FAILED
+        ) {
+            return {
+                ...formattedError,
+                message: "Your query doesn't match the scehma. Try double-checking it!",
+            };
+        }
+        return formattedError;
+    }
 });
 
 export default startServerAndCreateNextHandler(server);
