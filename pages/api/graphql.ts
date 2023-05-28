@@ -1,9 +1,11 @@
 import { ApolloServer } from "@apollo/server";
+import { ApolloServerPluginLandingPageLocalDefault, ApolloServerPluginLandingPageProductionDefault } from "@apollo/server/plugin/landingPage/default";
 import { ApolloServerErrorCode } from "@apollo/server/errors";
 import { startServerAndCreateNextHandler } from "@as-integrations/next";
 import { Neo4jGraphQL } from "@neo4j/graphql";
 import gql from "graphql-tag";
 import neo4j from "neo4j-driver";
+import allowCors from "@/utils/cors";
 
 const typeDefs = gql`
     type User @exclude(operations: [CREATE, UPDATE, DELETE]) {
@@ -44,6 +46,12 @@ const neoSchema = new Neo4jGraphQL({typeDefs, driver});
 const server = new ApolloServer({
     schema: await neoSchema.getSchema(),
     introspection: true,
+    plugins: [
+        process.env.NODE_ENV === 'production'
+        ? ApolloServerPluginLandingPageProductionDefault({
+            footer: false,
+        }) : ApolloServerPluginLandingPageLocalDefault({ footer: false }),
+    ],
     formatError: (formattedError, error) => {
         if (
             formattedError.extensions?.code ===
@@ -58,4 +66,8 @@ const server = new ApolloServer({
     }
 });
 
-export default startServerAndCreateNextHandler(server);
+const handler = startServerAndCreateNextHandler(server, {
+    context: async (req, res) => ({ req, res }),
+});
+
+export default allowCors(handler);
