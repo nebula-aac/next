@@ -43,6 +43,7 @@ const neoSchema = new Neo4jGraphQL({typeDefs, driver});
 
 const server = new ApolloServer({
     schema: await neoSchema.getSchema(),
+    introspection: true,
     formatError: (formattedError, error) => {
         if (
             formattedError.extensions?.code ===
