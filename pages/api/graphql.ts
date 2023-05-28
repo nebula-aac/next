@@ -6,6 +6,7 @@ import { Neo4jGraphQL } from "@neo4j/graphql";
 import gql from "graphql-tag";
 import neo4j from "neo4j-driver";
 import allowCors from "@/utils/cors";
+import { NextApiRequest, NextApiResponse } from "next";
 
 const typeDefs = gql`
     type User @exclude(operations: [CREATE, UPDATE, DELETE]) {
@@ -41,16 +42,16 @@ const driver = neo4j.driver(
     neo4j.auth.basic(process.env.NEO4J_USER, process.env.NEO4J_PASSWORD)
 );
 
-const neoSchema = new Neo4jGraphQL({typeDefs, driver});
+const neoSchema = new Neo4jGraphQL({ typeDefs, driver });
 
 const server = new ApolloServer({
     schema: await neoSchema.getSchema(),
     introspection: true,
     plugins: [
         process.env.NODE_ENV === 'production'
-        ? ApolloServerPluginLandingPageProductionDefault({
-            footer: false,
-        }) : ApolloServerPluginLandingPageLocalDefault({ footer: false }),
+            ? ApolloServerPluginLandingPageProductionDefault({
+                footer: false,
+            }) : ApolloServerPluginLandingPageLocalDefault({ footer: false }),
     ],
     formatError: (formattedError, error) => {
         if (
@@ -66,8 +67,15 @@ const server = new ApolloServer({
     }
 });
 
-const handler = startServerAndCreateNextHandler(server, {
-    context: async (req, res) => ({ req, res }),
+const nextHandler = startServerAndCreateNextHandler(server, {
+    context: async (req: NextApiRequest, res: NextApiResponse) => ({ req, res }),
 });
+
+const handler: (req: NextApiRequest, res: NextApiResponse) => Promise<void> = async (
+    req: NextApiRequest,
+    res: NextApiResponse
+) => {
+    await nextHandler(req, res);
+};
 
 export default allowCors(handler);
