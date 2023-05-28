@@ -40,16 +40,6 @@ const driver = neo4j.driver(
 
 const neoSchema = new Neo4jGraphQL({typeDefs, driver});
 
-const resolvers = {
-    Query: {
-        getUser: () => {
-            return {
-                id: "Foo",
-            };
-        },
-    },
-};
-
 const server = new ApolloServer({
     schema: await neoSchema.getSchema(),
     introspection: true,
