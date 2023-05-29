@@ -17,6 +17,6 @@ jobs:
           node-version: 18
           cache: 'pnpm'
       - name: Install deps
-        run: pnpm ci
+        run: pnpm install
       - name: Run Dagger pipeline
         run: node --loader ts-node/esm ./build.mts
