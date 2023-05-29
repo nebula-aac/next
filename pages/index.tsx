@@ -47,7 +47,7 @@ type User = {
 
 type Tag = {
 	id?: string;
-	name?: string;
+	name: string;
 	__typename: string;
 };
 
