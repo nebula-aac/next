@@ -4,6 +4,8 @@ import dynamic from 'next/dynamic';
 import {uniqBy} from 'rambda';
 import {useState} from 'react';
 
+import {type Article, type FormattedData, type Link, type Node, type QueryData, type Tag} from '@/types';
+
 const NoSsrForceGraph = dynamic(async () => import('../lib/NoSsrForceGraph'), {
 	ssr: false,
 });
@@ -29,36 +31,6 @@ const mostRecentQuery = gql`
   }
 `;
 
-export type Article = {
-	id?: string;
-	url: string;
-	__typename: string;
-	title: string;
-	user: User;
-	tags: Tag[];
-};
-
-type User = {
-	id?: string;
-	username: string;
-	avatar?: string;
-	__typename: string;
-};
-
-type Tag = {
-	id?: string;
-	name: string;
-	__typename: string;
-};
-
-type Node = Article | User | Tag;
-type Link = {source: string; target: string};
-
-type FormattedData = {
-	nodes: Node[];
-	links: Link[];
-};
-
 const formatData = (data: {articles?: Article[] | undefined}): FormattedData | undefined => {
 	const nodes: Node[] = [];
 	const links: Link[] = [];
@@ -76,47 +48,47 @@ const formatData = (data: {articles?: Article[] | undefined}): FormattedData | u
 
 		if (!nodes.some(node => node.id === id)) {
 			nodes.push({
-				id,
-				url,
-				__typename,
-				title,
-				user,
-				tags,
+				id: a.id,
+				url: a.url,
+				__typename: a.__typename,
+				title: a.title,
+				user: a.user,
+				tags: a.tags,
 			});
 		}
 
-		console.log('Link being created with source:', user?.username, 'and target:', id);
+		console.log('Link being created with source:', a.user?.username, 'and target:', a.id);
 
 		links.push({
-			source: user.username,
-			target: id,
+			source: a.user?.username,
+			target: a.id,
 		});
-		console.log('Link created:', {source: user.username, target: id});
+		console.log('Link created:', {source: a.user?.username, target: a.id});
 
 		tags.forEach((t: Tag) => {
 			console.log('Processing tag:', t);
 
 			const {name, __typename} = t;
-			console.log('Tag name assigned as id:', name);
+			console.log('Tag name assigned as id:', t.name);
 
 			if (!nodes.some(node => node.id === name)) {
 				nodes.push({
-					id: name,
-					url,
-					title,
-					__typename,
-					user,
-					tags,
+					id: t.name,
+					url: a.url,
+					__typename: t.__typename,
+					title: a.title,
+					user: a.user,
+					tags: a.tags,
 				});
 			}
 
-			console.log('Link being created with source:', id, 'and target:', name);
+			console.log('Link being created with source:', a?.id, 'and target:', t.name);
 
 			links.push({
-				source: id,
-				target: name,
+				source: a.id,
+				target: t.name,
 			});
-			console.log('Link created:', {source: id, target: name});
+			console.log('Link created:', {source: a?.id, target: t.name});
 		});
 
 		const {username, avatar, __typename: userTypename} = user;
@@ -124,13 +96,13 @@ const formatData = (data: {articles?: Article[] | undefined}): FormattedData | u
 
 		if (!nodes.some(node => node.id === username)) {
 			nodes.push({
-				id: username,
-				url,
-				title,
-				avatar,
-				__typename: userTypename,
-				user,
-				tags,
+				id: a.user.username,
+				url: a.url,
+				title: a.title,
+				avatar: a.user.avatar,
+				__typename: a.user.__typename,
+				user: a.user,
+				tags: a.tags,
 			});
 		}
 	});
@@ -153,21 +125,20 @@ const formatData = (data: {articles?: Article[] | undefined}): FormattedData | u
 	};
 };
 
-type QueryData = {
-	articles?: Article[];
-};
-
 export default function Home() {
 	const [graphData, setGraphData] = useState<FormattedData | undefined>({
 		nodes: [],
 		links: [],
 	});
 
-	const {data} = useQuery<QueryData>(mostRecentQuery, {
+	const {loading, error, data} = useQuery<QueryData>(mostRecentQuery, {
 		onCompleted(data): void {
 			setGraphData(formatData(data));
 		},
 	});
+
+	if (loading) return "Loading..."
+	if (error) return `Error! ${error.message}`
 
 	return (
 		<NoSsrForceGraph
