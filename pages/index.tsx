@@ -30,7 +30,7 @@ const mostRecentQuery = gql`
 `;
 
 export type Article = {
-	id: string;
+	id?: string;
 	url: string;
 	__typename: string;
 	title: string;
@@ -39,15 +39,15 @@ export type Article = {
 };
 
 type User = {
-	id: string;
+	id?: string;
 	username: string;
-	avatar: string;
+	avatar?: string;
 	__typename: string;
 };
 
 type Tag = {
-	id: string;
-	name: string;
+	id?: string;
+	name?: string;
 	__typename: string;
 };
 
@@ -55,15 +55,11 @@ type Node = Article | User | Tag;
 type Link = {source: string; target: string};
 
 type FormattedData = {
-	// Nodes: Array<User | Tag | Article | Tag[]>;
-	// links: Array<{source: string; target: string}>;
 	nodes: Node[];
 	links: Link[];
 };
 
 const formatData = (data: {articles?: Article[] | undefined}): FormattedData | undefined => {
-	// Const nodes: Array<Article | User | Tag> = [];
-	// const links: Array<{source: string; target: string}> = [];
 	const nodes: Node[] = [];
 	const links: Link[] = [];
 
@@ -72,50 +68,84 @@ const formatData = (data: {articles?: Article[] | undefined}): FormattedData | u
 	}
 
 	data.articles.forEach((a: Article) => {
-		const {id, url, __typename, title, user, tags} = a;
-		nodes.push({
-			id,
-			url,
-			__typename,
-			title,
-			user,
-			tags,
-		});
+		console.log('Processing article:', a);
+
+		const {url, __typename, title, user, tags} = a;
+		const id = a?.id ?? url;
+		console.log('ID assigned:', id);
+
+		if (!nodes.some(node => node.id === id)) {
+			nodes.push({
+				id,
+				url,
+				__typename,
+				title,
+				user,
+				tags,
+			});
+		}
+
+		console.log('Link being created with source:', user?.username, 'and target:', id);
 
 		links.push({
 			source: user.username,
 			target: id,
 		});
+		console.log('Link created:', {source: user.username, target: id});
 
 		tags.forEach((t: Tag) => {
+			console.log('Processing tag:', t);
+
 			const {name, __typename} = t;
-			nodes.push({
-				id: name,
-				url,
-				title,
-				__typename,
-				user,
-				tags,
-			});
+			console.log('Tag name assigned as id:', name);
+
+			if (!nodes.some(node => node.id === name)) {
+				nodes.push({
+					id: name,
+					url,
+					title,
+					__typename,
+					user,
+					tags,
+				});
+			}
+
+			console.log('Link being created with source:', id, 'and target:', name);
+
 			links.push({
 				source: id,
 				target: name,
 			});
+			console.log('Link created:', {source: id, target: name});
 		});
 
 		const {username, avatar, __typename: userTypename} = user;
-		nodes.push({
-			id: username,
-			url,
-			title,
-			avatar,
-			__typename: userTypename,
-			user,
-			tags,
-		});
+		console.log('User username assigned as id:', username);
+
+		if (!nodes.some(node => node.id === username)) {
+			nodes.push({
+				id: username,
+				url,
+				title,
+				avatar,
+				__typename: userTypename,
+				user,
+				tags,
+			});
+		}
 	});
 
+	console.log('Final nodes:', nodes);
+	console.log('Final links:', links);
+
 	const uniqueNodes = uniqBy((item: Node) => item.id, nodes);
+
+	// Find orphaned links
+	const nodeIds = new Set(uniqueNodes.map(node => node.id));
+	const orphanedLinks = links.filter(link => !nodeIds.has(link.source) || !nodeIds.has(link.target));
+	if (orphanedLinks.length > 0) {
+		console.error('Orphaned links found:', orphanedLinks);
+	}
 
 	return {
 		nodes: uniqueNodes,
@@ -143,7 +173,7 @@ export default function Home() {
 		<NoSsrForceGraph
 			graphData={graphData ?? {nodes: [], links: []}}
 			linkTarget=''
-			nodeLabel={node => String(node.id)}
+			nodeLabel={'id'}
 			nodeAutoColorBy={'__typename'}
 			nodeRelSize={8}
 		/>
