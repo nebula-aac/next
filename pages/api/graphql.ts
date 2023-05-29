@@ -1,12 +1,13 @@
-import { ApolloServer } from "@apollo/server";
-import { ApolloServerPluginLandingPageLocalDefault, ApolloServerPluginLandingPageProductionDefault } from "@apollo/server/plugin/landingPage/default";
-import { ApolloServerErrorCode } from "@apollo/server/errors";
-import { startServerAndCreateNextHandler } from "@as-integrations/next";
-import { Neo4jGraphQL } from "@neo4j/graphql";
-import gql from "graphql-tag";
-import neo4j from "neo4j-driver";
-import allowCors from "@/utils/cors";
-import { NextApiRequest, NextApiResponse } from "next";
+import {ApolloServer} from '@apollo/server';
+import {ApolloServerErrorCode} from '@apollo/server/errors';
+import {ApolloServerPluginLandingPageLocalDefault, ApolloServerPluginLandingPageProductionDefault} from '@apollo/server/plugin/landingPage/default';
+import {startServerAndCreateNextHandler} from '@as-integrations/next';
+import {Neo4jGraphQL} from '@neo4j/graphql';
+import gql from 'graphql-tag';
+import neo4j from 'neo4j-driver';
+import {type NextApiRequest, type NextApiResponse} from 'next';
+
+import allowCors from '@/utils/cors';
 
 const typeDefs = gql`
     type User @exclude(operations: [CREATE, UPDATE, DELETE]) {
@@ -38,44 +39,45 @@ const typeDefs = gql`
 `;
 
 const driver = neo4j.driver(
-    process.env.NEO4J_URI,
-    neo4j.auth.basic(process.env.NEO4J_USER, process.env.NEO4J_PASSWORD)
+	process.env.NEO4J_URI,
+	neo4j.auth.basic(process.env.NEO4J_USER, process.env.NEO4J_PASSWORD),
 );
 
-const neoSchema = new Neo4jGraphQL({ typeDefs, driver });
+const neoSchema = new Neo4jGraphQL({typeDefs, driver});
 
 const server = new ApolloServer({
-    schema: await neoSchema.getSchema(),
-    introspection: true,
-    plugins: [
-        process.env.NODE_ENV === 'production'
-            ? ApolloServerPluginLandingPageProductionDefault({
-                footer: false,
-            }) : ApolloServerPluginLandingPageLocalDefault({ footer: false }),
-    ],
-    formatError: (formattedError, error) => {
-        if (
-            formattedError.extensions?.code ===
-            ApolloServerErrorCode.GRAPHQL_VALIDATION_FAILED
-        ) {
-            return {
-                ...formattedError,
-                message: "Your query doesn't match the scehma. Try double-checking it!",
-            };
-        }
-        return formattedError;
-    }
+	schema: await neoSchema.getSchema(),
+	introspection: true,
+	plugins: [
+		process.env.NODE_ENV === 'production'
+			? ApolloServerPluginLandingPageProductionDefault({
+				footer: false,
+			}) : ApolloServerPluginLandingPageLocalDefault({footer: false}),
+	],
+	formatError(formattedError, error) {
+		if (
+			formattedError.extensions?.code
+            === ApolloServerErrorCode.GRAPHQL_VALIDATION_FAILED
+		) {
+			return {
+				...formattedError,
+				message: 'Your query doesn\'t match the scehma. Try double-checking it!',
+			};
+		}
+
+		return formattedError;
+	},
 });
 
 const nextHandler = startServerAndCreateNextHandler(server, {
-    context: async (req: NextApiRequest, res: NextApiResponse) => ({ req, res }),
+	context: async (req: NextApiRequest, res: NextApiResponse) => ({req, res}),
 });
 
 const handler: (req: NextApiRequest, res: NextApiResponse) => Promise<void> = async (
-    req: NextApiRequest,
-    res: NextApiResponse
+	req: NextApiRequest,
+	res: NextApiResponse,
 ) => {
-    await nextHandler(req, res);
+	await nextHandler(req, res);
 };
 
 export default allowCors(handler);

@@ -5,7 +5,7 @@ const allowCors = (fn: (req: NextApiRequest, res: NextApiResponse) => Promise<vo
     res: NextApiResponse
 ) => {
     res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader('origin', 'https://lobste-rs-graph-mu.vercel.app/');
+    res.setHeader('origin', 'https://main--lobster-supergraph.apollographos.net/graphql/');
     res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
     res.setHeader(
