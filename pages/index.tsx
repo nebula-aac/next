@@ -154,7 +154,7 @@ export default function Home() {
 		links: [],
 	});
 
-	const {error, data} = useQuery<QueryData>(mostRecentQuery, {
+	const {error, loading, data} = useQuery<QueryData>(mostRecentQuery, {
 		onCompleted(data): void {
 			setGraphData(formatData(data));
 		},
@@ -195,11 +195,9 @@ export default function Home() {
 	*/
 	const [loadMoreArticles] = useLazyQuery(moreArticlesQuery);
 
-	/*
-	If (loading) {
+	if (loading) {
 		return 'Loading...';
 	}
-	*/
 
 	if (error) {
 		return `Error! ${error.message}`;
@@ -225,4 +223,3 @@ export default function Home() {
 		/>
 	);
 }
-
