@@ -1,4 +1,5 @@
 module.exports = {
+	parser: '@typescript-eslint/parser',
 	env: {
 		browser: true,
 		es2021: true,
@@ -30,9 +31,11 @@ module.exports = {
 	parserOptions: {
 		ecmaVersion: 'latest',
 		sourceType: 'module',
+		project: ['./tsconfig.json']
 	},
 	plugins: [
 		'react',
+		'@typescript-eslint'
 	],
 	rules: {
 		'new-cap': [0],

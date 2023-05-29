@@ -1,4 +1,4 @@
-import {useQuery} from '@apollo/client';
+import {type LazyQueryResult, useLazyQuery, useQuery} from '@apollo/client';
 import gql from 'graphql-tag';
 import dynamic from 'next/dynamic';
 import {uniqBy} from 'rambda';
@@ -31,6 +31,29 @@ const mostRecentQuery = gql`
   }
 `;
 
+const moreArticlesQuery = gql`
+	query articlesByTag($tag: String) {
+		articles(
+		where: { tags_SOME: { name: $tag } }
+		options: { limit: 10, sort: { created: DESC } }
+		) {
+		__typename
+		id
+		url
+		title
+		created
+		tags {
+			__typename
+			name
+		}
+		user {
+			username
+			avatar
+			__typename
+		}
+		}
+	}
+`;
 const formatData = (data: {articles?: Article[] | undefined}): FormattedData | undefined => {
 	const nodes: Node[] = [];
 	const links: Link[] = [];
@@ -131,22 +154,74 @@ export default function Home() {
 		links: [],
 	});
 
-	const {loading, error, data} = useQuery<QueryData>(mostRecentQuery, {
+	const {error, data} = useQuery<QueryData>(mostRecentQuery, {
 		onCompleted(data): void {
 			setGraphData(formatData(data));
 		},
 	});
 
-	if (loading) return "Loading..."
-	if (error) return `Error! ${error.message}`
+	/*
+	Const [
+		loadMoreArticles,
+		{called, loading, data: newData},
+	]: [
+		(variables?: {tag: string} | undefined) => void,
+		{called: boolean; loading: boolean; data?: any},
+	] = useLazyQuery<any, {tag: string}>(
+		moreArticlesQuery,
+		{
+			variables: {tag: ''},
+			onCompleted(data) {
+				const newSubgraph = formatData(data);
+				setGraphData(prevData => {
+					if (prevData) {
+						return {
+							nodes: uniqBy((node: Node) => node.id, [
+								...(prevData?.nodes ?? []),
+								...(newSubgraph?.nodes ?? []),
+							]),
+							links: [
+								...(prevData.links ?? []),
+								...(newSubgraph?.links ?? []),
+							],
+						};
+					}
+
+					return prevData;
+				});
+			},
+		},
+	);
+	*/
+	const [loadMoreArticles] = useLazyQuery(moreArticlesQuery);
+
+	/*
+	If (loading) {
+		return 'Loading...';
+	}
+	*/
+
+	if (error) {
+		return `Error! ${error.message}`;
+	}
 
 	return (
 		<NoSsrForceGraph
-			graphData={graphData ?? {nodes: [], links: []}}
+			graphData={graphData}
 			linkTarget=''
 			nodeLabel={'id'}
 			nodeAutoColorBy={'__typename'}
 			nodeRelSize={8}
+			onNodeClick={(node, event) => {
+				console.log('You cliked me!');
+				console.log(node);
+				if (node.__typename === 'Tag') {
+					console.log('Load more articles');
+					void loadMoreArticles({variables: {tag: node.id}});
+				} else if (node.__typename === 'Article') {
+					window.open(node.url as string, '_blank');
+				}
+			}}
 		/>
 	);
 }
